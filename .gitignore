@@ -1,0 +1,12 @@
+# Frontend and Backend dependencies
+Frontend/node_modules
+Backend/node_modules
+
+# Build files
+Frontend/build
+Backend/build
+
+# Misc
+*.log
+.DS_Store
+*.env
