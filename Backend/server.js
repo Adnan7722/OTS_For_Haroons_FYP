@@ -18,7 +18,7 @@ const uri = process.env.MONGODB_URI;
 
 
 // Mongoose connection
-mongoose.connect("mongodb+srv://l217722:mongo12345678@cluster0.uwahv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+mongoose.connect(uri)
     .then(() => console.log('DB Connected!!!!!!! (Server.js)'))
     .catch(err => {
         console.error('MongoDB connection error details:', {
