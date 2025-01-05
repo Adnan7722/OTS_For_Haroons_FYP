@@ -12,7 +12,7 @@ const app = express();
 const FE=process.env.FRONTEND_URL;
 // Middleware
 app.use(cors({
-    origin: FRONTEND_URL, 
+    origin: FE, 
   }));
   app.use(express.json());
 
