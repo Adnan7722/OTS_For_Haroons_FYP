@@ -9,9 +9,12 @@ require('dotenv').config();
 // Initialize app
 const app = express();
 
+const FE=process.env.FRONTEND_URL;
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+    origin: FRONTEND_URL, 
+  }));
+  app.use(express.json());
 
 
 const uri = process.env.MONGODB_URI;
