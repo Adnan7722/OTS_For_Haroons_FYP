@@ -10,23 +10,25 @@ require('dotenv').config();
 const app = express();
 
 // Middleware
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 
 
 const uri = process.env.MONGODB_URI;
 
 
-
-
 // Mongoose connection
-mongoose.connect(uri)
-.then(() => console.log('DB Connected!!!!!!! (Server.js)'))
-.catch(err => {
-    console.error('MongoDB connection error:', err.message);
-    process.exit(1);  // Exit the process if the database connection fails
-});
-
+mongoose.connect("mongodb+srv://l217722:mongo12345678@cluster0.uwahv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+    .then(() => console.log('DB Connected!!!!!!! (Server.js)'))
+    .catch(err => {
+        console.error('MongoDB connection error details:', {
+            name: err.name,
+            message: err.message,
+            code: err.code,
+            stack: err.stack
+        });
+        process.exit(1);
+    });
 
 
 

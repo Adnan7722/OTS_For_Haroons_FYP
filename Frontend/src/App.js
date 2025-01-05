@@ -3,6 +3,8 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Search, PlusCircle, BarChart2, Download, Info, ArrowRight, X } from 'lucide-react';
+import html2canvas from 'html2canvas';
 import './App.css';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -25,9 +27,10 @@ const columnMapping = {
   sentToBranch: 6,
 };
 
-const Button = ({ children, onClick, variant = 'default', size = 'md' }) => (
+const Button = ({ children, onClick, variant = 'primary', size = 'md', icon }) => (
   <button className={`button ${variant} ${size}`} onClick={onClick}>
-    {children}
+    {icon}
+    <span>{children}</span>
   </button>
 );
 
@@ -56,13 +59,27 @@ const Modal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay">
-      <div className="modal">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="modal-overlay"
+    >
+      <motion.div
+        initial={{ y: 50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 50, opacity: 0 }}
+        className="modal"
+      >
         <h2>{title}</h2>
-        {children}
-        <Button onClick={onClose}>Close</Button>
-      </div>
-    </div>
+        <div className="modal-content">
+          {children}
+        </div>
+        <div className="modal-actions">
+          <Button onClick={onClose} variant="neutral" icon={<X size={16} />}>Close</Button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
@@ -79,19 +96,19 @@ const Task = ({ task, moveTaskToNext, showDetails, onRemove }) => (
     <div className="task-actions">
       {task.columnId === 'sentToBranch' ? (
         <>
-          <Button onClick={() => showDetails(task)} variant="outline" size="sm">
+          <Button onClick={() => showDetails(task)} variant="outline" size="sm" icon={<Info size={16} />}>
             Details
           </Button>
-          <Button onClick={() => onRemove(task.orderID)} variant="destructive" size="sm">
+          <Button onClick={() => onRemove(task.orderID)} variant="accent" size="sm" icon={<X size={16} />}>
             Remove
           </Button>
         </>
       ) : (
         <>
-          <Button onClick={() => showDetails(task)} variant="outline" size="sm">
+          <Button onClick={() => showDetails(task)} variant="outline" size="sm" icon={<Info size={16} />}>
             Details
           </Button>
-          <Button onClick={() => moveTaskToNext(task)} variant="default" size="sm">
+          <Button onClick={() => moveTaskToNext(task)} variant="primary" size="sm" icon={<ArrowRight size={16} />}>
             Move
           </Button>
         </>
@@ -141,34 +158,114 @@ const PieChart = ({ tasks }) => {
     Object.entries(tasks).map(([key, value]) => [columnNames[key], value.length])
   );
 
+  const total = Object.values(taskCount).reduce((sum, count) => sum + count, 0);
   const data = {
     labels: Object.keys(taskCount),
     datasets: [
       {
         data: Object.values(taskCount),
         backgroundColor: [
-          'rgba(255, 99, 132, 0.8)',
-          'rgba(54, 162, 235, 0.8)',
-          'rgba(255, 206, 86, 0.8)',
-          'rgba(75, 192, 192, 0.8)',
-          'rgba(153, 102, 255, 0.8)',
-          'rgba(255, 159, 64, 0.8)',
+          '#FF6384',
+          '#36A2EB',
+          '#FFCE56',
+          '#4BC0C0',
+          '#9966FF',
+          '#FF9F40'
         ],
-        borderColor: [
-          'rgba(255, 99, 132, 1)',
-          'rgba(54, 162, 235, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(75, 192, 192, 1)',
-          'rgba(153, 102, 255, 1)',
-          'rgba(255, 159, 64, 1)',
-        ],
-        borderWidth: 1,
-      },
-    ],
+        hoverBackgroundColor: [
+          '#FF6384',
+          '#36A2EB',
+          '#FFCE56',
+          '#4BC0C0',
+          '#9966FF',
+          '#FF9F40'
+        ]
+      }
+    ]
   };
 
-  return <Pie data={data} />;
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          color: '#ffffff'
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            const percentage = ((value / total) * 100).toFixed(1);
+            return `${label}: ${value} (${percentage}%)`;
+          }
+        }
+      }
+    }
+  };
+
+  return (
+    <div className="pie-chart-container">
+      <div style={{ height: '300px' }}>
+        <Pie data={data} options={options} />
+      </div>
+      <div className="pie-chart-legend">
+        {Object.entries(taskCount).map(([label, value], index) => (
+          <div key={label} className="legend-item">
+            <span 
+              className="legend-color" 
+              style={{ backgroundColor: data.datasets[0].backgroundColor[index] }}
+            />
+            <span className="legend-label">{label}</span>
+            <span className="legend-value">
+              ({value} - {((value / total) * 100).toFixed(1)}%)
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };
+
+const Header = ({ searchTerm, setSearchTerm, setShowForm, setIsChartVisible, downloadMasterOrders }) => (
+  <header className="header">
+    <div className="header-content">
+      <div className="brand">
+        <h1 className="logo">
+          Haroon's 
+          <span className="logo-subtitle ">Designer</span>
+        </h1>
+        <div>
+          <h2 className="logo1">                     Order Tracking Module</h2>
+        </div>
+      </div>
+      
+      <div className="header-actions">
+        <Button onClick={() => setShowForm(true)} icon={<PlusCircle />} variant="primary">
+        New
+        </Button>
+        <div className="search-bar">
+          <Input
+            type="text"
+            placeholder="Search by Order ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <Search className="search-icon" size={20} />
+        </div>
+        <Button onClick={() => setIsChartVisible(true)} icon={<BarChart2 />} variant="secondary">
+          Analytics
+        </Button>
+        <Button onClick={downloadMasterOrders} icon={<Download />} variant="secondary" className="export-button">
+          Export
+        </Button>
+      </div>
+    </div>
+  </header>
+);
 
 const OrderTracking = () => {
   const [tasks, setTasks] = useState({
@@ -181,7 +278,20 @@ const OrderTracking = () => {
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [newOrderDetails, setNewOrderDetails] = useState({ id: '', productName: '', fabric: '', embroidery: '' });
+  const [newOrderDetails, setNewOrderDetails] = useState({ 
+    id: '', 
+    productName: '', 
+    size: '',
+    customSize: false,
+    measurements: {
+      chest: '',
+      shoulder: '',
+      armLength: '',
+      width: '',
+    },
+    fabric: '', 
+    embroidery: '' 
+  });
   const [isChartVisible, setIsChartVisible] = useState(false);
   const [showMovePopup, setShowMovePopup] = useState(false);
   const selectedTaskRef = useRef(null);
@@ -191,6 +301,7 @@ const OrderTracking = () => {
   const [gatePassNo, setGatePassNo] = useState('');
   const [showDetailsPopup, setShowDetailsPopup] = useState(false);
   const [taskDetails, setTaskDetails] = useState(null);
+  const chartRef = useRef(null);
 
   const masterNames = [
     "Ismail Sb", "Sajid Sb", "Ashfaq Sb", "Mubashir Sb",
@@ -207,44 +318,19 @@ const OrderTracking = () => {
   ];
 
   const productNames = [
-    "Sherwani",
-    "Prince Coat",
-    "Pant Coat",
-    "Waist Coat",
-    "Shalwar Suit",
-    "Kurta Trouser",
-    "Sherwani Kurta",
-    "Kurta",
-    "Trouser",
-    "Shalwar",
-    "Tuxedo",
-    "Dress Shirt",
-    "Tie",
-    "Bow Tie",
-    "Khussa",
-    "Turban",
-    "Shoes",
-    "Pocket Square",
-    "Shawl",
-    "Tuxedo Shirt",
-    "Pant",
-    "Mala",
-    "Coat",
-    "3pc Waist Coat",
-    "2pc Coat",
-    "2pc Pant",
-    "Prince Suit",
-    "Tuxedo Coat",
-    "Thobe",
-    "Tuxedo Belt",
-    "Lengha",
-    "Top Blouse",
-    "Dupatta",
-    "Patiala Shalwar"
+    "Sherwani", "Prince Coat", "Pant Coat", "Waist Coat",
+    "Shalwar Suit", "Kurta Trouser", "Sherwani Kurta",
+    "Kurta", "Trouser", "Shalwar", "Tuxedo", "Dress Shirt",
+    "Tie", "Bow Tie", "Khussa", "Turban", "Shoes",
+    "Pocket Square", "Shawl", "Tuxedo Shirt", "Pant",
+    "Mala", "Coat", "3pc Waist Coat", "2pc Coat", "2pc Pant",
+    "Prince Suit", "Tuxedo Coat", "Thobe", "Tuxedo Belt",
+    "Lengha", "Top Blouse", "Dupatta", "Patiala Shalwar"
   ];
 
-
   const branches = ["Emporium", "Fortress F1", "Warehouse"];
+
+  const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -358,6 +444,8 @@ const OrderTracking = () => {
     const newOrder = {
       orderID: newOrderDetails.id,
       productName: newOrderDetails.productName,
+      size: newOrderDetails.customSize ? 'Custom' : newOrderDetails.size,
+      measurements: newOrderDetails.customSize ? newOrderDetails.measurements : null,
       fabric: newOrderDetails.fabric,
       EMB: newOrderDetails.embroidery,
     };
@@ -377,7 +465,20 @@ const OrderTracking = () => {
       alert('Error saving order');
     }
 
-    setNewOrderDetails({ id: '', productName: '', fabric: '', embroidery: '' });
+    setNewOrderDetails({ 
+      id: '', 
+      productName: '', 
+      size: '',
+      customSize: false,
+      measurements: {
+        chest: '',
+        shoulder: '',
+        armLength: '',
+        width: '',
+      },
+      fabric: '', 
+      embroidery: '' 
+    });
     setShowForm(false);
   };
 
@@ -394,7 +495,6 @@ const OrderTracking = () => {
   const confirmMoveTask = async (currentColumnId) => {
     const selectedTask = selectedTaskRef.current;
     
-
     if (!selectedTask) {
       alert('No task selected for moving.');
       return;
@@ -486,195 +586,305 @@ const OrderTracking = () => {
     }
   };
 
+  const downloadAnalyticsInsights = async () => {
+    if (chartRef.current) {
+      const canvas = await html2canvas(chartRef.current);
+      const imageDataUrl = canvas.toDataURL('image/png');
+
+      // Generate AI report (this is a placeholder, you'd need to implement actual AI generation)
+      const aiReport = generateAIReport(tasks);
+
+      const fullCanvas = document.createElement('canvas');
+      const ctx = fullCanvas.getContext('2d');
+      fullCanvas.width = canvas.width;
+      fullCanvas.height = canvas.height; // Extra space for the report
+
+      ctx.fillStyle = '#121212';
+      ctx.fillRect(0, 0, fullCanvas.width, fullCanvas.height);
+
+      ctx.drawImage(canvas, 0, 0);
+
+      ctx.font = '14px Arial';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(aiReport, 20, canvas.height + 20, canvas.width - 40);
+
+      const link = document.createElement('a');
+      link.href = fullCanvas.toDataURL('image/png');
+      link.download = 'analytics_insights.png';
+      link.click();
+    }
+  };
+
+  const generateAIReport = (tasks) => {
+    // This is a placeholder for AI-generated report
+    // In a real application, you'd use an AI service or algorithm to generate insights
+    const totalTasks = Object.values(tasks).flat().length;
+    const completedTasks = tasks.sentToBranch.length;
+    const completionRate = ((completedTasks / totalTasks) * 100).toFixed(2);
+
+    return `
+      Analytics Report:
+      Total Orders: ${totalTasks}
+      Completed Orders: ${completedTasks}
+      Completion Rate: ${completionRate}%
+
+      Trends:
+      - Order completion rate is ${completionRate}%, which is ${completionRate > 70 ? 'good' : 'needs improvement'}.
+      - ${tasks.orderReceived.length} new orders are in the pipeline.
+
+      Recommendations:
+      - ${completionRate < 70 ? 'Focus on improving order processing efficiency.' : 'Maintain current performance levels.'}
+      - Consider increasing capacity if new order volume continues to grow.
+    `;
+  };
+
   return (
-    <div className="container">
-      <motion.h1
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="title"
-      >
-        Haroons Designer - Order Tracking
-      </motion.h1>
-      
-      <div className="actions">
-        
-        <Button onClick={() => setShowForm(true)}>
-          Add New Order
-        </Button>
-        <Input
-          type="text"
-          placeholder="Search by Order ID..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+    <>
+      <Header
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        setShowForm={setShowForm}
+        setIsChartVisible={setIsChartVisible}
+        downloadMasterOrders={downloadMasterOrders}
+      />
+      <div className="header-spacer"></div>
+      <div className="container">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="kanban-board"
+        >
+          {Object.keys(tasks).map((columnId) => (
+            <Column
+              key={columnId}
+              columnId={columnId}
+              tasks={tasks[columnId]}
+              moveTaskToNext={moveTaskToNext}
+              searchTerm={searchTerm}
+              showDetails={showDetails}
+              onRemove={removeTask}
+            />
+          ))}
+        </motion.div>
 
+        <AnimatePresence>
+          {showForm && (
+            <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Add New Order">
+              <Input
+                type="text"
+                placeholder="Order ID"
+                value={newOrderDetails.id}
+                onChange={(e) => setNewOrderDetails({ ...newOrderDetails, id: e.target.value })}
+              />
+              <Select
+                value={newOrderDetails.productName}
+                onChange={(e) => setNewOrderDetails({ ...newOrderDetails, productName: e.target.value })}
+                options={productNames}
+                placeholder="Select a Product"
+              />
+             
+              <Select
+                value={newOrderDetails.fabric}
+                onChange={(e) => setNewOrderDetails({ ...newOrderDetails, fabric: e.target.value })}
+                options={['Yes', 'No']}
+                placeholder="Haroons Fabric?"
+              />
+              <Select
+                value={newOrderDetails.embroidery}
+                onChange={(e) => setNewOrderDetails({ ...newOrderDetails, embroidery: e.target.value })}
+                options={['Yes', 'No']}
+                placeholder="Embroidery Included?"
+              />
 
-        <Button onClick={() => setIsChartVisible(!isChartVisible)}>
-          {isChartVisible ? 'Close' : 'Show'} Chart
-        </Button>
-        
-        <Button onClick={downloadMasterOrders}>
-          Download Master Orders
-        </Button>
-        
-      </div>
-     
-
-      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Add New Order">
-        <Input
-          type="text"
-          placeholder="Order ID"
-          value={newOrderDetails.id}
-          onChange={(e) => setNewOrderDetails({ ...newOrderDetails, id: e.target.value })}
-        />
-    
-
-        <Select
-          value={newOrderDetails.productName}
-          onChange={(e) => setNewOrderDetails({ ...newOrderDetails, productName: e.target.value })}
-          options={productNames}
-          placeholder="Select a Product"
-        />
-
-        <Select
-          value={newOrderDetails.fabric}
-          onChange={(e) => setNewOrderDetails({ ...newOrderDetails, fabric: e.target.value })}
-          options={['yes', 'no']}
-          placeholder="Fabric"
-        />
-        <Select
-          value={newOrderDetails.embroidery}
-          onChange={(e) => setNewOrderDetails({ ...newOrderDetails, embroidery: e.target.value })}
-          options={['yes', 'no']}
-          placeholder="Embroidery"
-        />
-        <Button onClick={handleAddNewOrder}>Confirm</Button>
-      </Modal>
-
-      <Modal isOpen={isChartVisible} onClose={() => setIsChartVisible(false)} title="Order Status Overview">
-        <PieChart tasks={tasks} />
-      </Modal>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="kanban-board"
-      >
-        {Object.keys(tasks).map((columnId) => (
-          <Column
-            key={columnId}
-            columnId={columnId}
-            tasks={tasks[columnId]}
-            moveTaskToNext={moveTaskToNext}
-            searchTerm={searchTerm}
-            showDetails={showDetails}
-            onRemove={removeTask}
-          />
-        ))}
-      </motion.div>
-
-      <Modal isOpen={showMovePopup} onClose={() => setShowMovePopup(false)} title="Move Task">
-        {(() => {
-          const currentColumnId = Object.keys(columnMapping).find(columnId => tasks[columnId].some(t => t.orderID === selectedTaskRef.current?.orderID));
-
-          switch (currentColumnId) {
-            case 'orderReceived':
-              return (
-                <Select
-                  value={masterName}
-                  onChange={(e) => setMasterName(e.target.value)}
-                  options={masterNames}
-                  placeholder="Select Master Name"
-                />
-              );
-            case 'cuttingReceived':
-              return (
-                <Select
-                  value={karigarName}
-                  onChange={(e) => setKarigarName(e.target.value)}
-                  options={karigarNames}
-                  placeholder="Select Karigar Name"
-                />
-              );
-            case 'stitchingReceived':
-              return (
-                <>
-                  <Select
-                    value={branch}
-                    onChange={(e) => setBranch(e.target.value)}
-                    options={branches}
-                    placeholder="Select Branch"
-                  />
-                  <Input
-                    type="text"
-                    placeholder="Gate Pass No."
-                    value={gatePassNo}
-                    onChange={(e) => setGatePassNo(e.target.value)}
-                  />
-                </>
-              );
-            default:
-              return null;
-          }
-        })()}
-       <Button
-        onClick={() => {
-
-          const currentColumnId = Object.keys(columnMapping).find(columnId => tasks[columnId].some(t => t.orderID === selectedTaskRef.current?.orderID));
-
-          if (currentColumnId==='orderReceived' && !masterName)  {
-            alert("Please select Master Name!");
-            return;
-          }
-
-        else if(currentColumnId==='cuttingReceived' &&  !karigarName)
-          {
-            alert("Please select Karigar Name!");
-            return;
-
-
-          }
-          
-          else if(currentColumnId==='stitchingReceived' && ( !branch || !gatePassNo ) )
-            {
-              alert("Please select all fields!");
-  
-              return;
-  
-            }
-
-
-          confirmMoveTask(
-            columnMapping[
-              Object.keys(columnMapping).find(columnId =>
-                tasks[columnId].some(t => t.orderID === selectedTaskRef.current?.orderID)
-              )
-            ]
-          );
-        }}
-      >
-        Confirm Move
-      </Button>
-      </Modal>
-
-      <Modal isOpen={showDetailsPopup} onClose={() => setShowDetailsPopup(false)} title="Task Details">
-        {taskDetails ? (
-          <div className="task-details">
-            {Object.entries(taskDetails).map(([key, value]) => (
-              <div key={key} className="detail-item">
-                <span className="detail-label">{key.charAt(0).toUpperCase() + key.slice(1)}:</span>
-                <span className="detail-value">{value}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p>Loading...</p>
-        )}
-      </Modal>
+<div className="size-selection">
+  <p>Select size:</p>
+  {sizes.map((size) => (
+    <div
+      key={size}
+      className={`size-box ${newOrderDetails.size === size ? 'selected' : ''}`}
+      onClick={() => setNewOrderDetails({ ...newOrderDetails, size, customSize: false })}
+    >
+      {size}
     </div>
+  ))}
+  <button
+    className={`custom-size-button ${newOrderDetails.customSize ? 'selected' : ''}`}
+    onClick={() => setNewOrderDetails({ ...newOrderDetails, customSize: true, size: '' })}
+  >
+    Custom Size
+  </button>
+</div>
+{newOrderDetails.customSize && (
+  <div className="custom-size-form">
+    <h3>Custom Measurements</h3>
+    <form>
+      <label>
+        Chest:  
+        <input
+          type="number"
+          value={newOrderDetails.measurements.chest}
+          onChange={(e) => setNewOrderDetails({
+            ...newOrderDetails,
+            measurements: { ...newOrderDetails.measurements, chest: e.target.value }
+          })}
+        />
+      </label>
+      <label>
+        Shoulder:
+        <input
+          type="number"
+          value={newOrderDetails.measurements.shoulder}
+          onChange={(e) => setNewOrderDetails({
+            ...newOrderDetails,
+            measurements: { ...newOrderDetails.measurements, shoulder: e.target.value }
+          })}
+        />
+      </label>
+      <label>
+        Arm Length:
+        <input
+          type="number"
+          value={newOrderDetails.measurements.armLength}
+          onChange={(e) => setNewOrderDetails({
+            ...newOrderDetails,
+            measurements: { ...newOrderDetails.measurements, armLength: e.target.value }
+          })}
+        />
+      </label>
+      <label>
+        Width:
+        <input
+          type="number"
+          value={newOrderDetails.measurements.width}
+          onChange={(e) => setNewOrderDetails({
+            ...newOrderDetails,
+            measurements: { ...newOrderDetails.measurements, width: e.target.value }
+          })}
+        />
+      </label>
+    </form>
+  </div>
+)}
+
+              <Button onClick={handleAddNewOrder}>Confirm</Button>
+            </Modal>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isChartVisible && (
+            <Modal isOpen={isChartVisible} onClose={() => setIsChartVisible(false)} title="Order Status Overview">
+              <div ref={chartRef}>
+                <PieChart tasks={tasks} />
+              </div>
+              <button className="download-button" onClick={downloadAnalyticsInsights}>
+                Download Insights
+              </button>
+            </Modal>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showMovePopup && (
+            <Modal isOpen={showMovePopup} onClose={() => setShowMovePopup(false)} title="Move Task">
+              {(() => {
+                const currentColumnId = Object.keys(columnMapping).find(columnId => tasks[columnId].some(t => t.orderID === selectedTaskRef.current?.orderID));
+
+                switch (currentColumnId) {
+                  case 'orderReceived':
+                    return (
+                      <Select
+                        value={masterName}
+                        onChange={(e) => setMasterName(e.target.value)}
+                        options={masterNames}
+                        placeholder="Select Master Name"
+                      />
+                    );
+                  case 'cuttingReceived':
+                    return (
+                      <Select
+                        value={karigarName}
+                        onChange={(e) => setKarigarName(e.target.value)}
+                        options={karigarNames}
+                        placeholder="Select Karigar Name"
+                      />
+                    );
+                  case 'stitchingReceived':
+                    return (
+                      <>
+                        <Select
+                          value={branch}
+                          onChange={(e) => setBranch(e.target.value)}
+                          options={branches}
+                          placeholder="Select Branch"
+                        />
+                        <Input
+                          type="text"
+                          placeholder="Gate Pass No."
+                          value={gatePassNo}
+                          onChange={(e) => setGatePassNo(e.target.value)}
+                        />
+                      </>
+                    );
+                  default:
+                    return null;
+                }
+              })()}
+              <Button onClick={() => {
+                const currentColumnId = Object.keys(columnMapping).find(columnId => tasks[columnId].some(t => t.orderID === selectedTaskRef.current?.orderID));
+
+                if (currentColumnId === 'orderReceived' && !masterName) {
+                  alert("Please select Master Name!");
+                  return;
+                } else if (currentColumnId === 'cuttingReceived' && !karigarName) {
+                  alert("Please select Karigar Name!");
+                  return;
+                } else if (currentColumnId === 'stitchingReceived' && (!branch || !gatePassNo)) {
+                  alert("Please select all fields!");
+                  return;
+                }
+
+                confirmMoveTask(
+                  columnMapping[
+                    Object.keys(columnMapping).find(columnId =>
+                      tasks[columnId].some(t => t.orderID === selectedTaskRef.current?.orderID)
+                    )
+                  ]
+                );
+              }}>
+                Confirm Move
+              </Button>
+            </Modal>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showDetailsPopup && (
+            <Modal isOpen={showDetailsPopup} onClose={() => setShowDetailsPopup(false)} title="Order Details">
+              {taskDetails ? (
+                <div className="task-details">
+                  {Object.entries(taskDetails).map(([key, value]) => (
+                    <div key={key} className="detail-item">
+                      <span className="detail-label">{key.charAt(0).toUpperCase() + key.slice(1)}:</span>
+                      <span className="detail-value">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p>Loading...</p>
+              )}
+            </Modal>
+          )}
+        </AnimatePresence>
+
+        <footer className="footer">
+          <p>&copy; 2024 Haroon's Designers. All rights reserved. A Genuine 'Made In Pakistan' Brand</p>
+        </footer>
+      </div>
+    </>
   );
 };
 
 export default OrderTracking;
+

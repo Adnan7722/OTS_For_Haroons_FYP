@@ -1,0 +1,57 @@
+{
+    "env": {
+      "browser": true,
+      "es2021": true,
+      "node": true
+    },
+    "extends": [
+      "eslint:recommended",
+      "plugin:react/recommended",
+      "plugin:react-hooks/recommended",
+      "plugin:jsx-a11y/recommended",
+      "plugin:import/errors",
+      "plugin:import/warnings",
+      "plugin:import/typescript"
+    ],
+    "parser": "babel-eslint",
+    "parserOptions": {
+      "ecmaFeatures": {
+        "jsx": true
+      },
+      "ecmaVersion": 12,
+      "sourceType": "module"
+    },
+    "plugins": [
+      "react",
+      "react-hooks",
+      "jsx-a11y",
+      "import"
+    ],
+    "rules": {
+      "no-unused-vars": "warn",
+      "react/prop-types": "off",
+      "react/react-in-jsx-scope": "off", // Not needed in React 17+
+      "react/jsx-uses-react": "off", // Not needed in React 17+
+      "react/jsx-uses-vars": "warn",
+      "no-console": "warn",
+      "no-debugger": "warn",
+      "react/jsx-no-target-blank": "off",
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
+      "import/no-unresolved": "error",
+      "import/named": "error",
+      "import/default": "error",
+      "import/namespace": "error",
+      "import/no-named-as-default": "off",
+      "import/no-named-as-default-member": "off",
+      "globals": {
+        "self": "readonly"
+      }
+    },
+    "settings": {
+      "react": {
+        "version": "detect"
+      }
+    }
+  }
+  
