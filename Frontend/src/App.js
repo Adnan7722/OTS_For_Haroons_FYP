@@ -6,6 +6,8 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Search, PlusCircle, BarChart2, Download, Info, ArrowRight, X } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import './App.css';
+const backendUrl = process.env.REACT_APP_BACKEND_URL;
+
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -343,12 +345,12 @@ const OrderTracking = () => {
           stitchingReceivedData,
           sentToBranchData
         ] = await Promise.all([
-          axios.get('http://localhost:5000/GET_ORF'),
-          axios.get('http://localhost:5000/GET_CG'),
-          axios.get('http://localhost:5000/GET_CR'),
-          axios.get('http://localhost:5000/GET_SG'),
-          axios.get('http://localhost:5000/GET_SR'),
-          axios.get('http://localhost:5000/GET_STB')
+          axios.get(`${backendUrl}/GET_ORF`),
+          axios.get(`${backendUrl}/GET_CG`),
+          axios.get(`${backendUrl}/GET_CR`),
+          axios.get(`${backendUrl}/GET_SG`),
+          axios.get(`${backendUrl}/GET_SR`),
+          axios.get(`${backendUrl}/GET_STB`)
         ]);
 
         setTasks({
@@ -372,22 +374,22 @@ const OrderTracking = () => {
       let response;
       switch (task.columnId) {
         case 'orderReceived':
-          response = await axios.get(`http://localhost:5000/GET_ORF/${task.orderID}`);
+          response = await axios.get(`${backendUrl}/GET_ORF/${task.orderID}`);
           break;
         case 'cuttingGiven':
-          response = await axios.get(`http://localhost:5000/GET_CG/${task.orderID}`);
+          response = await axios.get(`${backendUrl}/GET_CG/${task.orderID}`);
           break;
         case 'cuttingReceived':
-          response = await axios.get(`http://localhost:5000/GET_CR/${task.orderID}`);
+          response = await axios.get(`${backendUrl}/GET_CR/${task.orderID}`);
           break;
         case 'stitchingGiven':
-          response = await axios.get(`http://localhost:5000/GET_SG/${task.orderID}`);
+          response = await axios.get(`${backendUrl}/GET_SG/${task.orderID}`);
           break;
         case 'stitchingReceived':
-          response = await axios.get(`http://localhost:5000/GET_SR/${task.orderID}`);
+          response = await axios.get(`${backendUrl}/GET_SR/${task.orderID}`);
           break;
         case 'sentToBranch':
-          response = await axios.get(`http://localhost:5000/GET_STB/${task.orderID}`);
+          response = await axios.get(`${backendUrl}/GET_STB/${task.orderID}`);
           break;
         default:
           throw new Error('Unknown column');
@@ -419,7 +421,7 @@ const OrderTracking = () => {
 
   const removeTask = async (orderID) => {
     try {
-      await axios.delete(`http://localhost:5000/DELETE_STB/${orderID}`);
+      await axios.delete(`${backendUrl}/DELETE_STB/${orderID}`);
       setTasks((prevTasks) => ({
         ...prevTasks,
         sentToBranch: prevTasks.sentToBranch.filter(task => task.orderID !== orderID),
@@ -451,10 +453,14 @@ const OrderTracking = () => {
     };
 
     try {
-      const response = await axios.post('http://localhost:5000/', newOrder);
+      const response = await axios.post(`${backendUrl}/`, newOrder);
       if (response.status === 201) {
         setTasks((prevTasks) => ({
           ...prevTasks,
+
+
+
+
           orderReceived: [...prevTasks.orderReceived, newOrder],
         }));
       } else {
@@ -530,7 +536,7 @@ const OrderTracking = () => {
           sourceColumn = 'stitchingReceived';
           targetColumn = 'sentToBranch';
           updatedTask = await moveTaskBetweenColumns('GET_SR', 'DELETE_SR', 'POST_STB', selectedTask.orderID, { branch, gatePassNo });
-          await axios.post('http://localhost:5000/ADD_MASTER_ORDER', updatedTask);
+          await axios.post(`${backendUrl}/ADD_MASTER_ORDER`, updatedTask);
           break;
         default:
           throw new Error('Invalid current column ID');
@@ -556,20 +562,20 @@ const OrderTracking = () => {
   };
 
   const moveTaskBetweenColumns = async (getEndpoint, deleteEndpoint, postEndpoint, orderID, additionalData = {}) => {
-    const response = await axios.get(`http://localhost:5000/${getEndpoint}/${orderID}`);
+    const response = await axios.get(`${backendUrl}/${getEndpoint}/${orderID}`);
     const existingOrder = response.data;
 
-    await axios.delete(`http://localhost:5000/${deleteEndpoint}`, { data: { orderID } });
+    await axios.delete(`${backendUrl}/${deleteEndpoint}`, { data: { orderID } });
 
     const updatedTask = { ...existingOrder, ...additionalData };
-    await axios.post(`http://localhost:5000/${postEndpoint}`, updatedTask);
+    await axios.post(`${backendUrl}/${postEndpoint}`, updatedTask);
 
     return updatedTask;
   };
 
   const downloadMasterOrders = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/download-master-orders', {
+      const response = await axios.get(`${backendUrl}/download-master-orders`, {
         responseType: 'blob'
       });
 
